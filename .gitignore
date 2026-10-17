@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Decompilation, APK analysis & scratch files
+resources/
+sources/
+*.jadx
+*.xapk
+*.apk
+*.log
+*.png
+attach_bt_to_wsl.ps1
+HANDOFF_GEMINI.md
+HA_INTEGRATION_DESIGN.md
+test_fbl16_ble.py
+
+# Editor & OS artifacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~

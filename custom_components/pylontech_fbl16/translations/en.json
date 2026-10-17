@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "bluetooth_confirm": {
+        "title": "Discovered Pylontech FB-L-16",
+        "description": "Discovered Pylontech battery **{name}**. Would you like to connect and add it to Home Assistant?",
+        "data": {
+          "device_key": "Quectel Device Key (auto-extracted from BLE advertisement)"
+        }
+      },
+      "user": {
+        "title": "Add Pylontech FB-L-16 Battery",
+        "description": "Enter the Bluetooth MAC address and Quectel Device Key for your battery.",
+        "data": {
+          "address": "Bluetooth MAC Address",
+          "device_key": "Quectel Device Key (hex)",
+          "product_key": "Product Key (optional)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This battery is already configured in Home Assistant."
+    }
+  }
+}
