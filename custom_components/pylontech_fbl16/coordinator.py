@@ -38,6 +38,8 @@ from .const import (
     FIELD_ENERGY_CHG_TOTAL,
     FIELD_ENERGY_DISCHG_TODAY,
     FIELD_ENERGY_DISCHG_TOTAL,
+    FIELD_GRID_CUTOFF_SOC,
+    FIELD_HEATER_STATE,
     FIELD_MANUFACTURER,
     FIELD_MAX_CHG_CURRENT_LIMIT,
     FIELD_MAX_DISCHG_CURRENT_LIMIT,
@@ -48,6 +50,7 @@ from .const import (
     FIELD_PACK_CURRENT,
     FIELD_PACK_VOLTAGE,
     FIELD_RATED_CAPACITY_AH,
+    FIELD_RESERVE_SOC,
     FIELD_SOC,
     FIELD_SOH,
     FIELD_SUGGESTED_CHG_I,
@@ -275,6 +278,10 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "energy_charged_total": t.get(FIELD_ENERGY_CHG_TOTAL, 0.0),
             "energy_discharged_total": t.get(FIELD_ENERGY_DISCHG_TOTAL, 0.0),
             "max_target_soc": t.get(FIELD_MAX_TARGET_SOC, 100),
+            "grid_cutoff_soc": t.get(FIELD_GRID_CUTOFF_SOC),
+            "reserve_soc": t.get(FIELD_RESERVE_SOC),
+            "heater_state": t.get(FIELD_HEATER_STATE, 0),
+            "heating_state": "Heating" if t.get(FIELD_HEATER_STATE) == 1 else "Standby",
         }
 
         # Decode 16 Cell Voltages (mV -> V)

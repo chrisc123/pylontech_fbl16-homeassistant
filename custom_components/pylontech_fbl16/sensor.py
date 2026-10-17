@@ -228,6 +228,40 @@ PACK_SENSORS: tuple[Fbl16SensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         value_fn=lambda d: d.get("energy_discharged_total"),
     ),
+    # Heating & Config Limits
+    Fbl16SensorEntityDescription(
+        key="heating_state",
+        name="Heating State",
+        icon="mdi:heat-wave",
+        value_fn=lambda d: d.get("heating_state"),
+    ),
+    Fbl16SensorEntityDescription(
+        key="max_target_soc",
+        name="Max Target SOC",
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("max_target_soc"),
+    ),
+    Fbl16SensorEntityDescription(
+        key="grid_cutoff_soc",
+        name="Grid Cutoff SOC",
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("grid_cutoff_soc"),
+    ),
+    Fbl16SensorEntityDescription(
+        key="reserve_soc",
+        name="Backup Reserve SOC",
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("reserve_soc"),
+    ),
 )
 
 
