@@ -12,7 +12,7 @@ A local, cloud-free Home Assistant integration for the **Pylontech FB-L-16** (Fi
 - **100% Local & Cloud-Free**: Communicates directly with the battery's onboard Quectel BLE module. No cloud accounts, manufacturer bridges, or Wi-Fi connections required.
 - **Auto-Discovery**: Automatically discovers `PY_FBL16_*` batteries broadcasting nearby and auto-populates the Quectel Device Key (`dk`).
 - **ESPHome Bluetooth Proxy Support**: Fully compatible with Home Assistant's native Bluetooth subsystem (`bleak-retry-connector`). Works via local Bluetooth dongles or ESPHome Bluetooth Proxies.
-- **Streaming Telemetry**: Subscribes directly to the battery's periodic broadcast stream (~35–70s intervals), updating entities instantaneously without active polling overhead.
+- **Streaming Telemetry (Dynamic Push)**: Subscribes directly to the battery's unsolicited BLE telemetry stream without polling overhead. Dynamically updates entities whenever the battery pushes data (every ~35–75s when actively charging/discharging, or ~300s when idle).
 - **Comprehensive Sensors (32+ Entities)**:
   - **Pack State**: State of Charge (%), State of Health (%), Terminal Voltage (V), Cutoff Voltage (V), Current (A), Instantaneous Power (W).
   - **Inverter Guidance Limits**: Suggested Charging & Discharging Voltages (V), Suggested Charging & Discharging Current Limits (A), Inverter BMS Max Limits (A).
@@ -82,8 +82,14 @@ If the battery is not discovered automatically:
 > [!IMPORTANT]
 > **Single Bluetooth Connection Limit**: The Pylontech battery BMS allows only **one** simultaneous Bluetooth connection. If the official mobile app is connected to the battery, Home Assistant will be blocked from connecting. Close or force-stop the mobile app when using this integration.
 
-> [!NOTE]
-> **Initial Telemetry Broadcast**: The battery sends telemetry packets approximately every 35 to 70 seconds. When the integration first connects, entity values will populate as soon as the first broadcast packet is received.
+### Telemetry Broadcast & Update Frequency
+
+The battery uses an unsolicited, event-driven BLE broadcast model rather than traditional active polling:
+- **Active State (Charging / Discharging)**: When current is actively flowing through the battery, telemetry packets are broadcast frequently (typically every **35 to 75 seconds**).
+- **Idle / Standby State (Floating / Nighttime)**: When the battery is resting with pack current near 0 A, the dongle firmware automatically enters power-saving mode and throttles reporting to **once every ~300 seconds (5 minutes)**.
+- **Initial Telemetry Broadcast**: When Home Assistant first boots or reconnects, entities will populate as soon as the first broadcast packet is received (within 35s–300s depending on battery activity).
+- **Pure Local Push**: The integration operates in event-driven `local_push` mode with no rigid polling deadlines. Entities retain their cached values throughout the 5-minute standby intervals without flickering to unavailable.
+- **Fixed Firmware Behavior**: This reporting interval is hardcoded in the Pylontech dongle firmware and is not configurable in the official mobile app or Home Assistant.
 
 ---
 
