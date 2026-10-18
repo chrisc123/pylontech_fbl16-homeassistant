@@ -18,11 +18,11 @@ A local, cloud-free Home Assistant integration for the **Pylontech FB-L-16** (Fi
   - **Inverter Guidance Limits**: Suggested Charging & Discharging Voltages (V), Suggested Charging & Discharging Current Limits (A), Inverter BMS Max Limits (A).
   - **Temperatures**: Ambient Temperature (°C), BMS MOS Temperature (°C), Min/Max Cell Temperatures with cell index attributes.
   - **Cell Diagnostics**: Min/Max Cell Voltages (V) with index attributes.
-  - **Heating & Film Status**: `binary_sensor` Heater (`device_class: heat`), and `sensor` Heating State (`Standby` / `Heating` matching the official app).
+  - **Heating & Film Status**: `binary_sensor` Heater (`device_class: heat`), `sensor` Heating State (`Standby` / `Heating`), and Remaining Heating Time (min).
   - **Config & SOC Limits**: Max Target SOC (%), Grid Cutoff SOC (%), Backup Reserve SOC (%).
   - **Individual Cell Voltages**: Full telemetry for all 16 cells (`Cell 1..16 Voltage` in V).
   - **Individual Cell Temperatures**: Full telemetry for all 16 cells (`Cell 1..16 Temperature` in °C).
-  - **Energy & Statistics**: Daily & Total Energy Charged / Discharged (kWh), Total Cycle Count.
+  - **Energy & Capacity Statistics**: Daily & Total Energy Charged / Discharged (kWh), Daily & Total Capacity Charged / Discharged (Ah), Accurate Total Cycle Count.
 
 ---
 

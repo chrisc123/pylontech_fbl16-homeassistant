@@ -19,6 +19,7 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
     UnitOfTemperature,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -261,6 +262,47 @@ PACK_SENSORS: tuple[Fbl16SensorEntityDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
         value_fn=lambda d: d.get("reserve_soc"),
+    ),
+    Fbl16SensorEntityDescription(
+        key="remaining_heating_time",
+        name="Remaining Heating Time",
+        icon="mdi:timer-outline",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("remaining_heating_time"),
+    ),
+    # Capacity Counters (Ah)
+    Fbl16SensorEntityDescription(
+        key="capacity_charged_today",
+        name="Capacity Charged Today",
+        native_unit_of_measurement="Ah",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("capacity_charged_today"),
+    ),
+    Fbl16SensorEntityDescription(
+        key="capacity_discharged_today",
+        name="Capacity Discharged Today",
+        native_unit_of_measurement="Ah",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("capacity_discharged_today"),
+    ),
+    Fbl16SensorEntityDescription(
+        key="capacity_charged_total",
+        name="Total Capacity Charged",
+        native_unit_of_measurement="Ah",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("capacity_charged_total"),
+    ),
+    Fbl16SensorEntityDescription(
+        key="capacity_discharged_total",
+        name="Total Capacity Discharged",
+        native_unit_of_measurement="Ah",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: d.get("capacity_discharged_total"),
     ),
 )
 

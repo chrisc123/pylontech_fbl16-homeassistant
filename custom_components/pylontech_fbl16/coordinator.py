@@ -22,6 +22,10 @@ from .const import (
     CMD_TELEMETRY_STREAM,
     DOMAIN,
     FIELD_AMBIENT_TEMP,
+    FIELD_CAPACITY_CHG_TODAY,
+    FIELD_CAPACITY_CHG_TOTAL,
+    FIELD_CAPACITY_DISCHG_TODAY,
+    FIELD_CAPACITY_DISCHG_TOTAL,
     FIELD_CELL_TEMP_MAX,
     FIELD_CELL_TEMP_MAX_IDX,
     FIELD_CELL_TEMP_MIN,
@@ -40,6 +44,7 @@ from .const import (
     FIELD_ENERGY_DISCHG_TOTAL,
     FIELD_GRID_CUTOFF_SOC,
     FIELD_HEATER_STATE,
+    FIELD_HEATER_STATE_MASK,
     FIELD_MANUFACTURER,
     FIELD_MAX_CHG_CURRENT_LIMIT,
     FIELD_MAX_DISCHG_CURRENT_LIMIT,
@@ -50,6 +55,7 @@ from .const import (
     FIELD_PACK_CURRENT,
     FIELD_PACK_VOLTAGE,
     FIELD_RATED_CAPACITY_AH,
+    FIELD_REMAINING_HEATING_TIME,
     FIELD_RESERVE_SOC,
     FIELD_SOC,
     FIELD_SOH,
@@ -241,6 +247,10 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         i = t.get(FIELD_PACK_CURRENT, 0.0)
         power_w = round(float(v) * float(i), 1) if (v is not None and i is not None) else 0.0
 
+        # Heating state: check bit 4 of Struct 33 field 34 (MOS/Relay/Heater bitmask), or field 164
+        heat_mask = int(t.get(FIELD_HEATER_STATE_MASK, 0) or 0)
+        heater_active = bool(heat_mask & (1 << 4)) or bool(t.get(FIELD_HEATER_STATE) == 1)
+
         parsed: dict[str, Any] = {
             "device_model": str(t.get(FIELD_DEVICE_MODEL, "FB-L-16")),
             "manufacturer": str(t.get(FIELD_MANUFACTURER, "Pylontech")),
@@ -277,26 +287,46 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "energy_discharged_today": t.get(FIELD_ENERGY_DISCHG_TODAY, 0.0),
             "energy_charged_total": t.get(FIELD_ENERGY_CHG_TOTAL, 0.0),
             "energy_discharged_total": t.get(FIELD_ENERGY_DISCHG_TOTAL, 0.0),
+            "capacity_charged_today": t.get(FIELD_CAPACITY_CHG_TODAY, 0.0),
+            "capacity_discharged_today": t.get(FIELD_CAPACITY_DISCHG_TODAY, 0.0),
+            "capacity_charged_total": t.get(FIELD_CAPACITY_CHG_TOTAL, 0.0),
+            "capacity_discharged_total": t.get(FIELD_CAPACITY_DISCHG_TOTAL, 0.0),
             "max_target_soc": t.get(FIELD_MAX_TARGET_SOC, 100),
             "grid_cutoff_soc": t.get(FIELD_GRID_CUTOFF_SOC),
             "reserve_soc": t.get(FIELD_RESERVE_SOC),
-            "heater_state": t.get(FIELD_HEATER_STATE, 0),
-            "heating_state": "Heating" if t.get(FIELD_HEATER_STATE) == 1 else "Standby",
+            "heater_state": 1 if heater_active else 0,
+            "heating_state": "Heating" if heater_active else "Standby",
+            "remaining_heating_time": t.get(FIELD_REMAINING_HEATING_TIME),
         }
 
-        # Decode 16 Cell Voltages (mV -> V)
-        cv_bytes = t.get(FIELD_CELL_VOLTAGES_BYTES)
-        if isinstance(cv_bytes, str):
-            cv_bytes = cv_bytes.encode("latin-1")
+        # Decode 16 Cell Voltages & Temperatures (with smart auto-detection between ID 100 and ID 99)
+        raw_a = t.get(FIELD_CELL_VOLTAGES_BYTES)
+        raw_b = t.get(FIELD_CELL_TEMPS_BYTES)
+        if isinstance(raw_a, str):
+            raw_a = raw_a.encode("latin-1")
+        if isinstance(raw_b, str):
+            raw_b = raw_b.encode("latin-1")
+
+        cv_bytes = None
+        ct_bytes = None
+        for candidate in (raw_a, raw_b):
+            if isinstance(candidate, (bytes, bytearray)) and len(candidate) >= 32:
+                first_val = struct.unpack(">H", candidate[:2])[0]
+                if first_val > 1000:
+                    cv_bytes = candidate
+                else:
+                    ct_bytes = candidate
+
+        if cv_bytes is None:
+            cv_bytes = raw_a if (isinstance(raw_a, (bytes, bytearray)) and len(raw_a) >= 32) else raw_b
+        if ct_bytes is None:
+            ct_bytes = raw_b if (isinstance(raw_b, (bytes, bytearray)) and len(raw_b) >= 32) else raw_a
+
         if isinstance(cv_bytes, (bytes, bytearray)) and len(cv_bytes) >= 32:
             for idx in range(16):
                 cell_v = struct.unpack(">H", cv_bytes[idx * 2 : (idx + 1) * 2])[0] / 1000.0
                 parsed[f"cell_{idx + 1}_voltage"] = cell_v
 
-        # Decode 16 Cell Temperatures (0.1°C -> °C)
-        ct_bytes = t.get(FIELD_CELL_TEMPS_BYTES)
-        if isinstance(ct_bytes, str):
-            ct_bytes = ct_bytes.encode("latin-1")
         if isinstance(ct_bytes, (bytes, bytearray)) and len(ct_bytes) >= 32:
             for idx in range(16):
                 cell_t = struct.unpack(">h", ct_bytes[idx * 2 : (idx + 1) * 2])[0] / 10.0
