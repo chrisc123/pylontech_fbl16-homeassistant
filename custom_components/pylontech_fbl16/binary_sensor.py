@@ -88,6 +88,11 @@ class Fbl16BinarySensor(CoordinatorEntity[Fbl16DataUpdateCoordinator], BinarySen
         )
 
     @property
+    def available(self) -> bool:
+        """Return True if entity has valid data and is not stale."""
+        return bool(self.coordinator.data) and not self.coordinator.is_stale and super().available
+
+    @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
         if not self.coordinator.data:

@@ -6,6 +6,7 @@ import asyncio
 from datetime import timedelta
 import logging
 import struct
+import time
 from typing import Any
 
 from bleak import BleakClient
@@ -96,7 +97,7 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             name=name,
-            update_interval=timedelta(seconds=90),
+            update_interval=None,
         )
         self.address = address
         self.device_key = device_key
@@ -107,6 +108,19 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._packet_id = 1
         self._shutdown = False
         self._lock = asyncio.Lock()
+        self.last_telemetry_time: float = 0.0
+
+    @property
+    def is_connected(self) -> bool:
+        """Return True if BLE client is currently connected."""
+        return bool(self._client and self._client.is_connected)
+
+    @property
+    def is_stale(self) -> bool:
+        """Return True if no telemetry has been received for over 15 minutes."""
+        if self.last_telemetry_time == 0.0:
+            return True
+        return (time.monotonic() - self.last_telemetry_time) > 900.0
 
     def _next_packet_id(self) -> int:
         pid = self._packet_id
@@ -120,6 +134,23 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._stream_task = self.hass.async_create_background_task(
                 self._run_streaming_loop(), f"{DOMAIN}_{self.address}_stream"
             )
+            self._stream_task.add_done_callback(self._on_stream_task_done)
+
+    def _on_stream_task_done(self, task: asyncio.Task) -> None:
+        """Watchdog callback if streaming loop finishes unexpectedly."""
+        if self._shutdown:
+            return
+        exc = task.exception() if not task.cancelled() else None
+        if exc:
+            _LOGGER.error("Streaming loop terminated unexpectedly: %s; restarting in 5s...", exc)
+        else:
+            _LOGGER.warning("Streaming loop terminated; restarting in 5s...")
+        self.hass.loop.call_later(
+            5.0,
+            lambda: self.hass.async_create_background_task(
+                self.async_start_streaming(), f"{DOMAIN}_{self.address}_restart"
+            ),
+        )
 
     async def async_stop_streaming(self) -> None:
         """Stops the streaming loop and cleans up BLE connection."""
@@ -144,7 +175,7 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._client = None
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Called periodically by Home Assistant; ensures streaming task is alive."""
+        """Ensures streaming task is alive."""
         if not self._shutdown and (self._stream_task is None or self._stream_task.done()):
             await self.async_start_streaming()
         return self.data or {}
@@ -190,6 +221,12 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Wait for connection to drop or shutdown
                 while self._client and self._client.is_connected and not self._shutdown:
                     await asyncio.sleep(1.0)
+
+                # Link dropped normally or timed out
+                await self._disconnect_client()
+                if not self._shutdown:
+                    _LOGGER.info("Battery %s connection dropped; waiting %.1fs before reconnecting...", self.address, retry_delay)
+                    await asyncio.sleep(retry_delay)
 
             except asyncio.CancelledError:
                 break
@@ -244,6 +281,7 @@ class Fbl16DataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _process_telemetry_dict(self, t: dict[int, Any]) -> None:
         """Parses Struct 33/0 and dispatches data to Home Assistant."""
+        self.last_telemetry_time = time.monotonic()
         v = t.get(FIELD_PACK_VOLTAGE)
         i = t.get(FIELD_PACK_CURRENT, 0.0)
         power_w = round(float(v) * float(i), 1) if (v is not None and i is not None) else 0.0

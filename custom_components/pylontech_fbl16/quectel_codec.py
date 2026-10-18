@@ -242,29 +242,47 @@ class QuectelFrameStreamParser:
     def feed(self, chunk: bytes) -> list[tuple[int, int, bytes]]:
         """Feeds raw BLE bytes and returns a list of (packet_id, cmd, decrypted_payload)."""
         self.raw_buf.extend(chunk)
-        unescaped = bytearray(splice_buffer(bytes(self.raw_buf)))
         frames: list[tuple[int, int, bytes]] = []
 
-        while len(unescaped) >= 9:
-            idx = unescaped.find(b"\xAA\xAA")
+        while True:
+            idx = self.raw_buf.find(b"\xAA\xAA")
             if idx == -1:
-                if unescaped.endswith(b"\xAA"):
-                    unescaped = unescaped[-1:]
+                if self.raw_buf.endswith(b"\xAA"):
+                    del self.raw_buf[:-1]
                 else:
-                    unescaped.clear()
+                    self.raw_buf.clear()
                 break
             if idx > 0:
-                del unescaped[:idx]
-            if len(unescaped) < 9:
+                del self.raw_buf[:idx]
+
+            # raw_buf starts with b"\xAA\xAA"
+            unstuffed = bytearray(b"\xAA\xAA")
+            raw_idx = 2
+            n = len(self.raw_buf)
+            expected_unstuffed_len: int | None = None
+            found = False
+
+            while raw_idx < n:
+                b = self.raw_buf[raw_idx]
+                unstuffed.append(b)
+                raw_idx += 1
+                if b == 0xAA and raw_idx < n and self.raw_buf[raw_idx] == 0x55:
+                    raw_idx += 1
+
+                if expected_unstuffed_len is None and len(unstuffed) >= 4:
+                    payload_len = struct.unpack(">H", unstuffed[2:4])[0]
+                    expected_unstuffed_len = payload_len + 4
+
+                if expected_unstuffed_len is not None and len(unstuffed) >= expected_unstuffed_len:
+                    found = True
+                    break
+
+            if not found:
                 break
 
-            payload_len = struct.unpack(">H", unescaped[2:4])[0]
-            total_frame_len = payload_len + 4
-            if len(unescaped) < total_frame_len:
-                break
-
-            frame = bytes(unescaped[:total_frame_len])
-            del unescaped[:total_frame_len]
+            # Consume the exact raw bytes corresponding to this unstuffed frame
+            del self.raw_buf[:raw_idx]
+            frame = bytes(unstuffed[:expected_unstuffed_len])
 
             expected_cs = frame[4]
             calc_cs = sum(frame[5:]) & 0xFF
@@ -285,5 +303,4 @@ class QuectelFrameStreamParser:
 
             frames.append((packet_id, cmd, payload))
 
-        self.raw_buf = unescaped
         return frames

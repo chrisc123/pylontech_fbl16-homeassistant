@@ -420,6 +420,11 @@ class Fbl16Sensor(CoordinatorEntity[Fbl16DataUpdateCoordinator], SensorEntity):
         )
 
     @property
+    def available(self) -> bool:
+        """Return True if entity has valid data and is not stale."""
+        return bool(self.coordinator.data) and not self.coordinator.is_stale and super().available
+
+    @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""
         if not self.coordinator.data:
