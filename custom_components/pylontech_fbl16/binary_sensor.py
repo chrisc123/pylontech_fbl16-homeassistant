@@ -11,6 +11,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -28,6 +29,13 @@ class Fbl16BinarySensorEntityDescription(BinarySensorEntityDescription):
 
 
 BINARY_SENSORS: tuple[Fbl16BinarySensorEntityDescription, ...] = (
+    Fbl16BinarySensorEntityDescription(
+        key="problem",
+        name="Problem",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_on_fn=lambda d: d.get("system_state") in (2, 3),
+    ),
     Fbl16BinarySensorEntityDescription(
         key="heater",
         name="Heater",

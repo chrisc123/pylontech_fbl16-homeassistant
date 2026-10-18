@@ -31,7 +31,8 @@ FIELD_SYSTEM_SN: Final = 3             # e.g. "H260801CB0020216"
 FIELD_RATED_CAPACITY_AH: Final = 8     # e.g. 314.0 Ah
 FIELD_TOTAL_MODULES: Final = 11        # Total installed modules (e.g. 16)
 FIELD_TOTAL_CELLS: Final = 12          # Total cells (e.g. 16)
-FIELD_ONLINE_MODULES: Final = 14       # Online modules (e.g. 1)
+FIELD_MODULE_STATE: Final = 14         # 0=Standby, 1=Running, 2=Alarm, 3=Fault
+FIELD_CHG_DISCHG_STATE: Final = 15     # 0=Idle, 1=Charging, 2=Discharging
 FIELD_PACK_VOLTAGE: Final = 16         # Terminal Pack Voltage (V)
 FIELD_CUTOFF_VOLTAGE: Final = 18       # Cutoff / Bus Voltage (V)
 FIELD_PACK_CURRENT: Final = 19         # Pack Current (A)
